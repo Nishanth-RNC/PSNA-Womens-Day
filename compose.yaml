@@ -1,0 +1,6 @@
+services:
+  psnawomensday:
+    image: psnawomensday
+    build:
+      context: .
+      dockerfile: ./Dockerfile
