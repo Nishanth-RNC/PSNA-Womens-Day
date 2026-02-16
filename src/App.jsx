@@ -30,8 +30,37 @@ import {
   Gamepad2,
   Video,
   Gift,
-  MessageSquare
+  MessageSquare,
+  Camera,
+  Megaphone
 } from 'lucide-react';
+
+// --- Firebase Initialization ---
+import { initializeApp } from "firebase/app";
+import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+
+// Use environment variables from .env
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+};
+
+// Initialize Firebase
+// Note: This tries to initialize. If .env vars are missing (like in some previews), it catches the error.
+let app, auth, db;
+try {
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+} catch (error) {
+  console.error("Firebase Initialization Error (Check .env):", error);
+}
 
 // --- Constants & Mock Data ---
 
@@ -49,131 +78,229 @@ const QUOTES = [
   "Celebrate her today, respect her every day."
 ];
 
-// --- STUDENT EVENTS (Original) ---
+// --- STUDENT EVENTS (Strictly from Student Circular) ---
 const STUDENT_EVENTS = [
   {
     id: 1,
-    title: "Rhythm Queens",
-    type: "Dance",
-    category: "Both",
-    maxTeamSize: 4,
-    icon: <Music className="w-6 h-6" />,
-    description: "Showcase your moves! Solo or group dance battle.",
-    color: "from-pink-500 to-rose-500",
-    theme: "royal-gold"
-  },
-  {
-    id: 2,
-    title: "Melody Muses",
-    type: "Singing",
-    category: "Solo",
-    maxTeamSize: 1,
-    icon: <Mic className="w-6 h-6" />,
-    description: "The voice of the year. Solo vocal performance.",
-    color: "from-red-500 to-orange-500",
-    theme: "platinum-elite"
-  },
-  {
-    id: 3,
-    title: "Tech Diva",
-    type: "Hackathon",
-    category: "Team",
-    maxTeamSize: 4,
-    icon: <Code className="w-6 h-6" />,
-    description: "2-hour coding sprint. Solve real-world problems.",
-    color: "from-purple-500 to-indigo-500",
-    theme: "cyber-diamond"
-  },
-  {
-    id: 4,
-    title: "Canvas Magic",
+    title: "Creative Poster Contest",
     type: "Art",
     category: "Solo",
     maxTeamSize: 1,
     icon: <Palette className="w-6 h-6" />,
-    description: "Live painting competition. Theme: 'Empowerment'.",
+    date: "2026-02-23",
+    displayDate: "23.02.26",
+    time: "9.30 am to 11.00 am",
+    coordinator: "Mrs. Priya, CSE",
+    contact: "9790895764",
+    description: "Themes: 'Women Who Inspire Us' and 'Future Women Leaders'. Bring your own art supplies.",
     color: "from-yellow-500 to-amber-600",
     theme: "golden-frame"
   },
   {
+    id: 2,
+    title: "Photography",
+    type: "Creative",
+    category: "Solo",
+    maxTeamSize: 1,
+    icon: <Camera className="w-6 h-6" />,
+    date: "2026-02-23",
+    displayDate: "23.02.26",
+    time: "11.00 am to 12.30 pm",
+    coordinator: "Mrs S Uma Maheshwari, EEE",
+    contact: "9894961269",
+    description: "Theme: 'Faces of Confidence'. Capture the spirit of womanhood.",
+    color: "from-rose-400 to-pink-500",
+    theme: "rose-gold"
+  },
+  {
+    id: 3,
+    title: "Brave",
+    type: "Awareness Game",
+    category: "Solo",
+    maxTeamSize: 1,
+    icon: <ShieldCheck className="w-6 h-6" />,
+    date: "2026-02-23",
+    displayDate: "23.02.26",
+    time: "01.30 pm to 2.30 pm",
+    coordinator: "Mrs M.Lishmah Dominic, MBA",
+    contact: "9176057963",
+    description: "Women's Safety Awareness Game. Test your knowledge and reflexes.",
+    color: "from-teal-500 to-emerald-600",
+    theme: "cyber-diamond"
+  },
+  {
+    id: 4,
+    title: "Ramp Walk",
+    type: "Fashion",
+    category: "Solo",
+    maxTeamSize: 1,
+    icon: <Star className="w-6 h-6" />,
+    date: "2026-02-23",
+    displayDate: "23.02.26",
+    time: "2.00 pm to 4.00 pm",
+    coordinator: "Mrs B Subha, BME",
+    contact: "8973281169", // Updated from circular context if available or previous data
+    description: "Theme: 'Shakti - The Power Within'. Exhibit elegance and confidence.",
+    color: "from-fuchsia-500 to-pink-600",
+    theme: "platinum-elite"
+  },
+  {
     id: 5,
-    title: "Drama Queens",
-    type: "Skit",
-    category: "Team",
-    maxTeamSize: 4,
-    icon: <Sparkles className="w-6 h-6" />,
-    description: "Theatrical performance. Express yourself.",
-    color: "from-teal-500 to-emerald-500",
+    title: "Speak Up Challenge",
+    type: "Speaking",
+    category: "Solo",
+    maxTeamSize: 1,
+    icon: <Megaphone className="w-6 h-6" />,
+    date: "2026-02-24",
+    displayDate: "24.02.26",
+    time: "9.30 am to 11.00 am",
+    coordinator: "Dr A Viswa Sangeetha, ENG",
+    contact: "9600772392",
+    description: "Topic will be given on the spot. Voice your thoughts.",
+    color: "from-red-500 to-orange-500",
     theme: "theatre-red"
   },
   {
     id: 6,
-    title: "Fashionista",
-    type: "Ramp Walk",
+    title: "App Development",
+    type: "Technical",
+    category: "Team",
+    maxTeamSize: 4,
+    icon: <Smartphone className="w-6 h-6" />,
+    date: "2026-02-24",
+    displayDate: "24.02.26",
+    time: "11.00 am to 12.30 pm",
+    coordinator: "Dr.P.Priyadharshini, IT",
+    contact: "9047888831",
+    description: "Develop a solution for women safety or empowerment.",
+    color: "from-blue-600 to-indigo-600",
+    theme: "cyber-diamond"
+  },
+  {
+    id: 7,
+    title: "Vocal Solo",
+    type: "Music",
     category: "Solo",
     maxTeamSize: 1,
-    icon: <Star className="w-6 h-6" />,
-    description: "Elegance on the ramp. Theme: 'Traditional Twist'.",
-    color: "from-fuchsia-500 to-pink-600",
+    icon: <Mic className="w-6 h-6" />,
+    date: "2026-02-25",
+    displayDate: "25.02.26",
+    time: "09.30 am to 10.30 am",
+    coordinator: "Dr M Revathy, ECE",
+    contact: "9842330409",
+    description: "Solo singing competition. Time limit: 3 mins.",
+    color: "from-violet-500 to-purple-600",
+    theme: "royal-gold"
+  },
+  {
+    id: 8,
+    title: "Dance - Solo",
+    type: "Dance",
+    category: "Solo",
+    maxTeamSize: 1,
+    icon: <Music className="w-6 h-6" />,
+    date: "2026-02-25",
+    displayDate: "25.02.26",
+    time: "10.30 am to 12.30 pm",
+    coordinator: "Mrs P Senthilkumari, AIDS",
+    contact: "7348872039",
+    description: "Solo dance performance. Classical or Western.",
+    color: "from-pink-500 to-rose-500",
     theme: "rose-gold"
+  },
+  {
+    id: 9,
+    title: "Dance - Group",
+    type: "Dance",
+    category: "Team",
+    maxTeamSize: 8,
+    icon: <Users className="w-6 h-6" />,
+    date: "2026-02-25",
+    displayDate: "25.02.26",
+    time: "1.30 pm to 4.00 pm",
+    coordinator: "Mrs C Preethi, CSBS",
+    contact: "9677532525",
+    description: "Group choreography competition. Max 8 members.",
+    color: "from-rose-500 to-red-600",
+    theme: "theatre-red"
   }
 ];
 
-// --- TEACHER EVENTS (New from Schedule) ---
-// IDs start at 100 to avoid conflict
-const TEACHER_EVENTS = [
+// --- FACULTY EVENTS (Strictly from Faculty Circular) ---
+// IDs start at 100 to avoid conflict with student events
+const FACULTY_EVENTS = [
   {
     id: 101,
-    title: "Fun Games",
-    type: "Entertainment",
-    category: "Both", // Assuming both for fun games
-    maxTeamSize: 4,
+    title: "Play & Participate",
+    type: "Fun Games",
+    category: "Solo", 
+    maxTeamSize: 1, 
     icon: <Gamepad2 className="w-6 h-6" />,
-    description: "Feb 25 | 9:30 AM - 11:00 AM. Interactive fun activities.",
+    date: "2026-02-25",
+    displayDate: "25.02.26",
+    time: "9.30 am to 11.00 am",
+    coordinator: "Mrs P Senthilkumari, AIDS",
+    contact: "7348872039",
     color: "from-teal-500 to-green-500",
     theme: "cyber-diamond"
   },
   {
     id: 102,
-    title: "Dumb Charades",
-    type: "Acting",
+    title: "Talk Without Talking",
+    type: "Dumb Charades",
     category: "Team",
-    maxTeamSize: 4,
+    maxTeamSize: 4, 
     icon: <Sparkles className="w-6 h-6" />,
-    description: "Feb 25 | 2:00 PM - 4:00 PM. Act it out, let them guess!",
+    date: "2026-02-25",
+    displayDate: "25.02.26",
+    time: "2.00 pm to 4.00 pm",
+    coordinator: "Mrs.C.Preethi, CSBS",
+    contact: "9677532525",
     color: "from-violet-500 to-purple-500",
     theme: "theatre-red"
   },
   {
     id: 103,
-    title: "Reels",
-    type: "Digital",
+    title: "Smile Shots",
+    type: "Reels",
     category: "Solo",
     maxTeamSize: 1,
     icon: <Video className="w-6 h-6" />,
-    description: "Feb 26 | 9:30 AM - 11:00 AM. Create creative short videos.",
+    date: "2026-02-26",
+    displayDate: "26.02.26",
+    time: "9.30 am to 11.00 am",
+    coordinator: "Mrs.S.Arthy, CYS",
+    contact: "9489042624",
     color: "from-pink-500 to-rose-500",
     theme: "rose-gold"
   },
   {
     id: 104,
-    title: "Lucky Corner",
-    type: "Luck",
+    title: "Surprise Spot",
+    type: "Lucky Corner",
     category: "Solo",
     maxTeamSize: 1,
     icon: <Gift className="w-6 h-6" />,
-    description: "Feb 26 | 1:00 PM - 1:30 PM. Test your luck!",
+    date: "2026-02-26",
+    displayDate: "26.02.26",
+    time: "1.00 pm to 1.30 pm",
+    coordinator: "Mrs.Priya, CSE",
+    contact: "9790895764",
     color: "from-amber-400 to-yellow-500",
     theme: "golden-frame"
   },
   {
     id: 105,
-    title: "Debate",
-    type: "Speaking",
+    title: "Speak Up Challenge",
+    type: "Debate",
     category: "Solo",
     maxTeamSize: 1,
     icon: <MessageSquare className="w-6 h-6" />,
-    description: "Feb 26 | 2:00 PM - 4:00 PM. Voice your opinions.",
+    date: "2026-02-26",
+    displayDate: "26.02.26",
+    time: "2.00 pm to 4.00 pm",
+    coordinator: "Dr. P.Elizabeth Kalpana, ENG / Mrs. M.K.Subashini",
+    contact: "9894405655",
     color: "from-red-500 to-orange-500",
     theme: "platinum-elite"
   },
@@ -184,7 +311,11 @@ const TEACHER_EVENTS = [
     category: "Solo",
     maxTeamSize: 1,
     icon: <Mic className="w-6 h-6" />,
-    description: "Feb 27 | 9:30 AM - 11:00 AM. Solo vocal performance.",
+    date: "2026-02-27",
+    displayDate: "27.02.26",
+    time: "9.30 am to 11.00 am",
+    coordinator: "Mrs B Subha, BME",
+    contact: "9123574205",
     color: "from-blue-500 to-cyan-500",
     theme: "royal-gold"
   },
@@ -195,7 +326,11 @@ const TEACHER_EVENTS = [
     category: "Team",
     maxTeamSize: 6,
     icon: <Music className="w-6 h-6" />,
-    description: "Feb 27 | 11:00 AM - 12:30 PM. Group harmony.",
+    date: "2026-02-27",
+    displayDate: "27.02.26",
+    time: "11.00 am to 12.30 pm",
+    coordinator: "Mrs M.Lishmah Dominic, MBA",
+    contact: "9176057963",
     color: "from-indigo-500 to-blue-600",
     theme: "royal-gold"
   },
@@ -206,7 +341,11 @@ const TEACHER_EVENTS = [
     category: "Solo",
     maxTeamSize: 1,
     icon: <Star className="w-6 h-6" />,
-    description: "Feb 27 | 1:30 PM - 2:30 PM. Solo dance performance.",
+    date: "2026-02-27",
+    displayDate: "27.02.26",
+    time: "1.30 pm to 2.30 pm",
+    coordinator: "Mrs S Uma Maheshwari, EEE",
+    contact: "9894961269",
     color: "from-fuchsia-500 to-pink-600",
     theme: "rose-gold"
   },
@@ -217,11 +356,32 @@ const TEACHER_EVENTS = [
     category: "Team",
     maxTeamSize: 8,
     icon: <Users className="w-6 h-6" />,
-    description: "Feb 27 | 2:30 PM - 4:00 PM. Group choreography.",
+    date: "2026-02-27",
+    displayDate: "27.02.26",
+    time: "2.30 pm to 4.00 pm",
+    coordinator: "Dr M Revathy, ECE",
+    contact: "9842330409",
     color: "from-rose-500 to-red-600",
     theme: "theatre-red"
   }
 ];
+
+// Helper to check registration deadline
+const isRegistrationOpen = (eventDateStr) => {
+  if (!eventDateStr) return true; // Always open if no date specified
+  
+  // Logic: Registration must close at 23:59 on the PREVIOUS day.
+  // This means if (Current Date >= Event Date), it is closed.
+  const eventDate = new Date(eventDateStr);
+  const now = new Date();
+  
+  // Normalize to midnight for accurate day comparison
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const eventDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+
+  // Strictly strictly less than event day means yesterday or before.
+  return today.getTime() < eventDay.getTime();
+};
 
 // --- Styles (Light Mode Premium & Luxury Ticket Styles) ---
 const CustomStyles = () => (
@@ -522,16 +682,17 @@ const Auth = ({ users, onLogin, onRegisterUser, onResetPassword }) => {
   const [formData, setFormData] = useState({
     name: '',
     dept: '',
-    yearSec: '',
-    uniqueId: '', // RegNo for student, StaffId for teacher
+    year: '',
+    section: '',
+    uniqueId: '', // RegNo for student, StaffId for faculty
     phone: '',
     password: '',
-    masterCode: '' // Only for teacher signup
+    // masterCode removed
   });
 
   const resetForm = () => {
     setFormData({
-      name: '', dept: '', yearSec: '', uniqueId: '', phone: '', password: '', masterCode: ''
+      name: '', dept: '', year: '', section: '', uniqueId: '', phone: '', password: ''
     });
     setError('');
   };
@@ -587,15 +748,19 @@ const Auth = ({ users, onLogin, onRegisterUser, onResetPassword }) => {
         setError("Please fill all required fields.");
         return;
       }
-      if (role === 'student' && !formData.yearSec) {
-        setError("Year & Section is required for students.");
-        return;
-      }
-      if (role === 'teacher' && formData.masterCode !== 'admin') {
-        setError("Invalid Teacher Master Code.");
-        return;
-      }
       
+      // Strict Student Year Validation: Only III and IV Allowed
+      if (role === 'student') {
+        if (!formData.year || !formData.section) {
+          setError("Year & Section required.");
+          return;
+        }
+        if (formData.year !== 'III' && formData.year !== 'IV') {
+          setError("Registration is strictly for 3rd and Final Year students.");
+          return;
+        }
+      }
+
       // Check Uniqueness
       if (users.some(u => u.uniqueId === formData.uniqueId)) {
         setError(`${role === 'student' ? 'Register Number' : 'Staff ID'} already exists!`);
@@ -606,7 +771,7 @@ const Auth = ({ users, onLogin, onRegisterUser, onResetPassword }) => {
       const newUser = {
         name: formData.name,
         dept: formData.dept,
-        yearSec: role === 'student' ? formData.yearSec : null,
+        yearSec: role === 'student' ? `${formData.year} - ${formData.section}` : null,
         uniqueId: formData.uniqueId,
         phone: formData.phone,
         password: formData.password,
@@ -643,7 +808,7 @@ const Auth = ({ users, onLogin, onRegisterUser, onResetPassword }) => {
              <p className="text-rose-800/60 text-sm font-medium">Women's Day Celebration Portal</p>
           </div>
 
-          {/* Role Toggle */}
+          {/* Role Toggle - UPDATED "Teacher" to "Faculty" */}
           <div className="flex bg-white/40 rounded-full p-1 mb-6 border border-white/50 backdrop-blur-sm">
             <button
               type="button"
@@ -654,10 +819,10 @@ const Auth = ({ users, onLogin, onRegisterUser, onResetPassword }) => {
             </button>
             <button
               type="button"
-              onClick={() => {setRole('teacher'); resetForm();}}
-              className={`flex-1 py-2 rounded-full text-sm font-bold transition-all duration-300 ${role === 'teacher' ? 'bg-white text-rose-600 shadow-md transform scale-105' : 'text-rose-900/50 hover:text-rose-700'}`}
+              onClick={() => {setRole('faculty'); resetForm();}}
+              className={`flex-1 py-2 rounded-full text-sm font-bold transition-all duration-300 ${role === 'faculty' ? 'bg-white text-rose-600 shadow-md transform scale-105' : 'text-rose-900/50 hover:text-rose-700'}`}
             >
-              Teacher
+              Faculty
             </button>
           </div>
 
@@ -771,9 +936,18 @@ const Auth = ({ users, onLogin, onRegisterUser, onResetPassword }) => {
                 </div>
 
                 {role === 'student' && (
-                  <div className="md:col-span-2">
-                    <label className="text-rose-900/70 text-xs uppercase tracking-widest font-bold ml-1">Year & Section</label>
-                    <input name="yearSec" value={formData.yearSec} onChange={handleChange} className="w-full input-field rounded-xl px-4 py-2" placeholder="III - A" />
+                  <div className="md:col-span-2 grid grid-cols-2 gap-2">
+                    <select
+                      name="year"
+                      value={formData.year}
+                      onChange={handleChange}
+                      className="w-full input-field rounded-xl px-4 py-2 bg-white/60"
+                    >
+                      <option value="">Select Year</option>
+                      <option value="III">III (3rd Year)</option>
+                      <option value="IV">IV (Final Year)</option>
+                    </select>
+                    <input name="section" value={formData.section} onChange={handleChange} className="w-full input-field rounded-xl px-4 py-2" placeholder="Section (A,B,C)" />
                   </div>
                 )}
 
@@ -786,13 +960,6 @@ const Auth = ({ users, onLogin, onRegisterUser, onResetPassword }) => {
                   <label className="text-rose-900/70 text-xs uppercase tracking-widest font-bold ml-1">Create Password</label>
                   <input name="password" type="password" value={formData.password} onChange={handleChange} className="w-full input-field rounded-xl px-4 py-2" placeholder="Create Password" />
                 </div>
-
-                {role === 'teacher' && (
-                  <div className="md:col-span-2 bg-yellow-50 p-2 rounded-xl border border-yellow-100">
-                    <label className="text-yellow-700 text-xs uppercase tracking-widest font-bold ml-1">Teacher Master Code</label>
-                    <input name="masterCode" type="password" value={formData.masterCode} onChange={handleChange} className="w-full input-field rounded-xl px-4 py-2" placeholder="Teacher Master Code" />
-                  </div>
-                )}
               </div>
             )}
 
@@ -944,15 +1111,15 @@ const TicketView = ({ registration, event, user }) => {
                   <p className="text-sm font-bold opacity-90">{user.dept}</p>
                </div>
                <div>
-                 <p className="text-white/40 text-[9px] uppercase tracking-widest">Seat</p>
-                 <p className={`font-bold text-lg ${textGradientClass}`}>VIP FRONT ROW</p>
+                 <p className="text-white/40 text-[9px] uppercase tracking-widest">Status</p>
+                 <p className={`font-bold text-lg ${textGradientClass}`}>Selected</p>
                </div>
             </div>
 
             {/* Footer */}
             <div className="flex justify-between items-end z-10 border-t border-white/10 pt-2">
                <div className="text-white/50 text-[10px] uppercase tracking-widest font-mono">
-                  March 8, 2026 • 09:00 AM • Auditorium A
+                  {event.displayDate ? event.displayDate : 'March 8, 2026'} • {event.time ? event.time.split('to')[0] : '09:00 AM'} • Auditorium A
                </div>
                <div className="flex items-center gap-2">
                   <Star size={10} className="fill-current text-white/50" />
@@ -993,12 +1160,12 @@ const TicketView = ({ registration, event, user }) => {
 // 3. Admin Dashboard (Excel Downloads)
 const AdminDashboard = ({ registrations, events, allUsers }) => {
   
-  const generateCSV = (data, filename) => {
+  const downloadAll = () => {
     let csvContent = "data:text/csv;charset=utf-8,";
     // Header
     csvContent += "Event,Participant Name,ID,Department,Year/Sec,Phone,Role,Team Name,Teammates\n";
 
-    data.forEach(reg => {
+    registrations.forEach(reg => {
       // Find full user details for this registration
       const userDetails = allUsers.find(u => u.uniqueId === reg.userId);
       const eventDetails = events.find(e => e.id === reg.eventId);
@@ -1023,19 +1190,10 @@ const AdminDashboard = ({ registrations, events, allUsers }) => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", filename);
+    link.setAttribute("download", "PSNA_WomensDay_All_Registrations.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
-
-  const downloadAll = () => {
-    generateCSV(registrations, "PSNA_WomensDay_All_Registrations.csv");
-  };
-
-  const downloadEvent = (eventId, eventTitle) => {
-    const eventRegs = registrations.filter(r => r.eventId === eventId);
-    generateCSV(eventRegs, `PSNA_${eventTitle.replace(/\s+/g, '_')}_Registrations.csv`);
   };
 
   const getEventStats = (eventId) => {
@@ -1065,13 +1223,6 @@ const AdminDashboard = ({ registrations, events, allUsers }) => {
                 <div className={`p-3 rounded-xl text-white bg-gradient-to-br ${event.color} shadow-md`}>
                   {event.icon}
                 </div>
-                <button 
-                  onClick={() => downloadEvent(event.id, event.title)}
-                  className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                  title="Download Event Report"
-                >
-                  <Download size={20} />
-                </button>
               </div>
               <h3 className="text-gray-800 font-bold text-lg">{event.title}</h3>
               <p className="text-gray-500 text-sm mt-1 mb-4">{event.type}</p>
@@ -1092,44 +1243,6 @@ const AdminDashboard = ({ registrations, events, allUsers }) => {
           </div>
         ))}
       </div>
-      
-      <div className="glass-panel p-6 rounded-2xl mt-8 bg-white/60">
-        <h3 className="text-rose-900 font-bold mb-4 border-b border-rose-100 pb-2">Recent Activity</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-gray-600">
-            <thead>
-              <tr className="text-gray-400 border-b border-gray-200">
-                <th className="pb-3 pl-2">Event</th>
-                <th className="pb-3">Name</th>
-                <th className="pb-3">ID</th>
-                <th className="pb-3">Dept</th>
-                <th className="pb-3">Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {registrations.slice().reverse().slice(0, 5).map((reg, idx) => {
-                const user = allUsers.find(u => u.uniqueId === reg.userId);
-                return (
-                  <tr key={idx} className="border-b border-gray-100 hover:bg-white/50 transition-colors">
-                    <td className="py-3 pl-2 font-bold text-rose-700">
-                      {events.find(e => e.id === reg.eventId)?.title}
-                    </td>
-                    <td className="py-3 font-medium text-gray-800">{reg.userName}</td>
-                    <td className="py-3 font-mono text-xs">{reg.userId}</td>
-                    <td className="py-3 text-xs">{user?.dept || '-'}</td>
-                    <td className="py-3 text-xs text-gray-400">{new Date(reg.timestamp).toLocaleDateString()}</td>
-                  </tr>
-                );
-              })}
-              {registrations.length === 0 && (
-                <tr>
-                  <td colSpan="5" className="py-8 text-center text-gray-400 italic">No registrations found</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   );
 };
@@ -1141,6 +1254,7 @@ const RegistrationModal = ({ event, user, onClose, onRegister }) => {
     members: [] 
   });
   const [participationType, setParticipationType] = useState(event.category === 'Both' ? '' : event.category);
+  const isOpen = isRegistrationOpen(event.date);
 
   const addMember = () => {
     if (details.members.length < event.maxTeamSize - 1) { 
@@ -1175,115 +1289,142 @@ const RegistrationModal = ({ event, user, onClose, onRegister }) => {
             {event.type}
           </span>
           <h2 className="text-3xl font-bold text-gray-900 mt-2">{event.title}</h2>
-          <p className="text-gray-500 text-sm mt-1">{event.description}</p>
+          
+          {/* Event Details Section */}
+          <div className="mt-2 text-sm text-gray-600 space-y-1">
+             <p className="flex items-center gap-2">
+               <Calendar size={14}/> 
+               {event.displayDate || "Upcoming"} 
+               <span className="mx-2">|</span> 
+               {event.time || "TBA"}
+             </p>
+             {event.coordinator && (
+               <p className="flex items-center gap-2 text-rose-600 font-medium">
+                 <User size={14}/> Coord: {event.coordinator}
+               </p>
+             )}
+             {event.contact && (
+               <p className="flex items-center gap-2 text-rose-600 font-medium">
+                 <Phone size={14}/> {event.contact}
+               </p>
+             )}
+          </div>
+          
+          {!isOpen && (
+            <div className="mt-4 bg-red-100 text-red-700 p-3 rounded-lg text-sm font-bold text-center border border-red-200">
+              Registration Closed (Deadline Passed)
+            </div>
+          )}
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          
-          <div className="bg-rose-50 rounded-xl p-4 border border-rose-100 flex items-center gap-4">
-              <div className="bg-rose-100 p-2 rounded-full">
-                 <User size={20} className="text-rose-600" />
-              </div>
-              <div>
-                  <p className="text-xs text-rose-500 font-bold uppercase">Participant</p>
-                  <p className="text-rose-900 font-bold">{user.name}</p>
-                  <p className="text-xs text-rose-800/60 font-mono">ID: {user.uniqueId} | Dept: {user.dept}</p>
-              </div>
-          </div>
-
-          {event.category === 'Both' && (
-            <div>
-              <label className="text-gray-500 text-xs uppercase font-bold pl-1 mb-2 block">Participation Type</label>
-              <div className="flex gap-4">
-                <button
-                  type="button"
-                  onClick={() => setParticipationType('Solo')}
-                  className={`flex-1 py-3 rounded-xl border font-bold transition-all ${participationType === 'Solo' ? 'bg-rose-500 border-rose-500 text-white shadow-md' : 'border-gray-200 text-gray-400 hover:bg-gray-50'}`}
-                >
-                  Solo
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setParticipationType('Team')}
-                  className={`flex-1 py-3 rounded-xl border font-bold transition-all ${participationType === 'Team' ? 'bg-rose-500 border-rose-500 text-white shadow-md' : 'border-gray-200 text-gray-400 hover:bg-gray-50'}`}
-                >
-                  Team
-                </button>
-              </div>
+        {isOpen && (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            
+            <div className="bg-rose-50 rounded-xl p-4 border border-rose-100 flex items-center gap-4">
+                <div className="bg-rose-100 p-2 rounded-full">
+                   <User size={20} className="text-rose-600" />
+                </div>
+                <div>
+                    <p className="text-xs text-rose-500 font-bold uppercase">Participant</p>
+                    <p className="text-rose-900 font-bold">{user.name}</p>
+                    <p className="text-xs text-rose-800/60 font-mono">ID: {user.uniqueId} | Dept: {user.dept}</p>
+                </div>
             </div>
-          )}
 
-          {(participationType === 'Team' || event.category === 'Team') && (
-            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-gray-800 font-bold">Team Details</h3>
-                <span className="text-xs text-gray-500">Max {event.maxTeamSize} members including you</span>
-              </div>
-              
+            {event.category === 'Both' && (
               <div>
-                <label className="text-gray-500 text-xs uppercase font-bold pl-1">Team Name</label>
-                <input 
-                  required
-                  type="text" 
-                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2 text-gray-800 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 outline-none mt-1"
-                  value={details.teamName}
-                  onChange={e => setDetails({...details, teamName: e.target.value})}
-                />
+                <label className="text-gray-500 text-xs uppercase font-bold pl-1 mb-2 block">Participation Type</label>
+                <div className="flex gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setParticipationType('Solo')}
+                    className={`flex-1 py-3 rounded-xl border font-bold transition-all ${participationType === 'Solo' ? 'bg-rose-500 border-rose-500 text-white shadow-md' : 'border-gray-200 text-gray-400 hover:bg-gray-50'}`}
+                  >
+                    Solo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setParticipationType('Team')}
+                    className={`flex-1 py-3 rounded-xl border font-bold transition-all ${participationType === 'Team' ? 'bg-rose-500 border-rose-500 text-white shadow-md' : 'border-gray-200 text-gray-400 hover:bg-gray-50'}`}
+                  >
+                    Team
+                  </button>
+                </div>
               </div>
+            )}
 
-              <div className="space-y-3">
-                <p className="text-xs text-gray-500">Teammates (You are automatically included)</p>
-                {details.members.map((member, idx) => (
-                  <div key={idx} className="flex gap-2">
-                    <input 
-                      placeholder="Name"
-                      required
-                      className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-gray-800 text-sm"
-                      value={member.name}
-                      onChange={e => updateMember(idx, 'name', e.target.value)}
-                    />
-                    <input 
-                      placeholder="Reg No"
-                      required
-                      className="w-1/3 bg-white border border-gray-200 rounded-lg px-3 py-2 text-gray-800 text-sm"
-                      value={member.regNo}
-                      onChange={e => updateMember(idx, 'regNo', e.target.value)}
-                    />
+            {(participationType === 'Team' || event.category === 'Team') && (
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-gray-800 font-bold">Team Details</h3>
+                  <span className="text-xs text-gray-500">Max {event.maxTeamSize} members including you</span>
+                </div>
+                
+                <div>
+                  <label className="text-gray-500 text-xs uppercase font-bold pl-1">Team Name</label>
+                  <input 
+                    required
+                    type="text" 
+                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2 text-gray-800 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 outline-none mt-1"
+                    value={details.teamName}
+                    onChange={e => setDetails({...details, teamName: e.target.value})}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-xs text-gray-500">Teammates (You are automatically included)</p>
+                  {details.members.map((member, idx) => (
+                    <div key={idx} className="flex gap-2">
+                      <input 
+                        placeholder="Name"
+                        required
+                        className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-gray-800 text-sm"
+                        value={member.name}
+                        onChange={e => updateMember(idx, 'name', e.target.value)}
+                      />
+                      <input 
+                        placeholder="Reg No"
+                        required
+                        className="w-1/3 bg-white border border-gray-200 rounded-lg px-3 py-2 text-gray-800 text-sm"
+                        value={member.regNo}
+                        onChange={e => updateMember(idx, 'regNo', e.target.value)}
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          const newMembers = details.members.filter((_, i) => i !== idx);
+                          setDetails({...details, members: newMembers});
+                        }}
+                        className="p-2 text-red-400 hover:text-red-500 bg-red-50 rounded-lg"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))}
+                  
+                  {details.members.length < event.maxTeamSize - 1 && (
                     <button 
                       type="button"
-                      onClick={() => {
-                        const newMembers = details.members.filter((_, i) => i !== idx);
-                        setDetails({...details, members: newMembers});
-                      }}
-                      className="p-2 text-red-400 hover:text-red-500 bg-red-50 rounded-lg"
+                      onClick={addMember}
+                      className="text-sm text-rose-500 hover:text-rose-600 font-bold flex items-center gap-1"
                     >
-                      <X size={16} />
+                      + Add Teammate
                     </button>
-                  </div>
-                ))}
-                
-                {details.members.length < event.maxTeamSize - 1 && (
-                  <button 
-                    type="button"
-                    onClick={addMember}
-                    className="text-sm text-rose-500 hover:text-rose-600 font-bold flex items-center gap-1"
-                  >
-                    + Add Teammate
-                  </button>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          <div className="pt-4 border-t border-gray-200">
-            <button
-              type="submit"
-              className="w-full bg-rose-600 text-white font-bold py-4 rounded-xl hover:bg-rose-700 transition-all shadow-lg shadow-rose-200"
-            >
-              Confirm Registration
-            </button>
-          </div>
-        </form>
+            <div className="pt-4 border-t border-gray-200">
+              <button
+                type="submit"
+                className="w-full bg-rose-600 text-white font-bold py-4 rounded-xl hover:bg-rose-700 transition-all shadow-lg shadow-rose-200"
+              >
+                Confirm Registration
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );
@@ -1296,16 +1437,76 @@ const App = () => {
   const [users, setUsers] = useState([]); // All registered users
   const [registrations, setRegistrations] = useState([]); // All event registrations
   const [currentUser, setCurrentUser] = useState(null); // Currently logged in user
+  const [firebaseUser, setFirebaseUser] = useState(null);
   
   const [view, setView] = useState('events'); 
   const [selectedEvent, setSelectedEvent] = useState(null); 
+
+  // Initialize Firebase Auth
+  useEffect(() => {
+    if (auth) {
+      signInAnonymously(auth).catch(console.error);
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        setFirebaseUser(user);
+      });
+      return () => unsubscribe();
+    }
+  }, []);
+
+  // Sync data with Firestore
+  useEffect(() => {
+    if (!firebaseUser || !db) return;
+
+    // Listen to users collection
+    const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+      const usersData = snapshot.docs.map(doc => ({ ...doc.data(), firestoreId: doc.id }));
+      setUsers(usersData);
+    });
+
+    // Listen to registrations collection
+    const unsubRegs = onSnapshot(collection(db, 'registrations'), (snapshot) => {
+      const regsData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+      setRegistrations(regsData);
+    });
+
+    return () => {
+      unsubUsers();
+      unsubRegs();
+    };
+  }, [firebaseUser]);
 
   useEffect(() => {
     if (!currentUser) setView('events');
   }, [currentUser]);
 
-  const handleRegisterUser = (newUser) => {
-    setUsers([...users, newUser]);
+  // Tab Title and Favicon
+  useEffect(() => {
+    document.title = "PSNA Women's Day 2026";
+    const link = document.querySelector("link[rel~='icon']");
+    if (!link) {
+      const newLink = document.createElement('link');
+      newLink.rel = 'icon';
+      newLink.href = '/psna-logo.png';
+      document.head.appendChild(newLink);
+    } else {
+      link.href = '/psna-logo.png';
+    }
+  }, []);
+
+  const handleRegisterUser = async (newUser) => {
+    if (!firebaseUser || !db) {
+      // Fallback for preview
+      setUsers([...users, newUser]);
+      return;
+    }
+    
+    try {
+      await addDoc(collection(db, 'users'), newUser);
+      alert("Account created successfully! Please Sign In.");
+    } catch (e) {
+      console.error("Error adding document: ", e);
+      alert("Registration failed. Please try again.");
+    }
   };
 
   const handleLogin = (user) => {
@@ -1317,9 +1518,23 @@ const App = () => {
     // Data (users & registrations) is NOT cleared here, persisting data across sessions
   };
 
-  const handleResetPassword = (uniqueId, newPassword) => {
-    // In a real app, this would be an API call. Here we update local state.
-    setUsers(users.map(u => u.uniqueId === uniqueId ? { ...u, password: newPassword } : u));
+  const handleResetPassword = async (uniqueId, newPassword) => {
+    const userToUpdate = users.find(u => u.uniqueId === uniqueId);
+    
+    if (userToUpdate && userToUpdate.firestoreId && db) {
+      try {
+        const userRef = doc(db, 'users', userToUpdate.firestoreId);
+        await updateDoc(userRef, { password: newPassword });
+        alert("Password updated successfully!");
+      } catch (e) {
+        console.error("Error updating password: ", e);
+        alert("Failed to update password.");
+      }
+    } else {
+      // Fallback for local state only
+      setUsers(users.map(u => u.uniqueId === uniqueId ? { ...u, password: newPassword } : u));
+      alert("Password updated (Local Only)!");
+    }
   };
 
   const getMyRegistrations = () => {
@@ -1330,15 +1545,15 @@ const App = () => {
   // Determine which events to show based on user role
   const getAvailableEvents = () => {
     if (!currentUser) return [];
-    return currentUser.role === 'teacher' ? TEACHER_EVENTS : STUDENT_EVENTS;
+    return currentUser.role === 'faculty' ? FACULTY_EVENTS : STUDENT_EVENTS;
   };
 
   // Combine events for Admin view
   const getAllEvents = () => {
-    return [...STUDENT_EVENTS, ...TEACHER_EVENTS];
+    return [...STUDENT_EVENTS, ...FACULTY_EVENTS];
   };
 
-  const handleEventRegister = (details) => {
+  const handleEventRegister = async (details) => {
     if (getMyRegistrations().length >= 3) {
       alert("You can only register for a maximum of 3 events!");
       return;
@@ -1349,7 +1564,6 @@ const App = () => {
     }
 
     const newRegistration = {
-      id: Date.now(),
       userId: currentUser.uniqueId,
       userName: currentUser.name,
       userRole: currentUser.role,
@@ -1357,7 +1571,19 @@ const App = () => {
       timestamp: new Date().toISOString()
     };
 
-    setRegistrations([...registrations, newRegistration]);
+    if (firebaseUser && db) {
+      try {
+        await addDoc(collection(db, 'registrations'), newRegistration);
+      } catch (e) {
+        console.error("Error adding registration: ", e);
+        // Fallback
+        setRegistrations([...registrations, { ...newRegistration, id: Date.now() }]);
+      }
+    } else {
+       // Fallback
+       setRegistrations([...registrations, { ...newRegistration, id: Date.now() }]);
+    }
+
     setSelectedEvent(null);
     setView('tickets'); 
   };
@@ -1381,7 +1607,6 @@ const App = () => {
           <div className="flex items-center gap-4 mb-4 md:mb-0">
             <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-md">
                 <img src="/psna-logo.png" alt="PSNA Logo" className="w-full h-full object-cover" />
-                <span className="text-red-800 font-bold text-xs absolute">PSNA</span>
             </div>
             <div>
               <h1 className="text-2xl md:text-3xl font-black tracking-tight text-gray-900 leading-none">PSNA</h1>
@@ -1431,12 +1656,12 @@ const App = () => {
                 )}
               </button>
 
-              {currentUser.role === 'teacher' && (
+              {currentUser.role === 'faculty' && (
                 <button 
                   onClick={() => setView('admin')} 
                   className={`px-6 py-3 rounded-2xl flex items-center gap-2 transition-all duration-300 font-bold ${view === 'admin' ? 'bg-rose-600 text-white shadow-lg shadow-rose-200 transform scale-105' : 'glass-card text-gray-600 hover:bg-white hover:text-rose-600'}`}
                 >
-                  <Users size={18} /> Admin Dashboard
+                  <Users size={18} /> Admin
                 </button>
               )}
 
@@ -1457,6 +1682,7 @@ const App = () => {
                   {getAvailableEvents().map(event => {
                     const isRegistered = getMyRegistrations().some(r => r.eventId === event.id);
                     const isFull = getMyRegistrations().length >= 3;
+                    const isClosed = !isRegistrationOpen(event.date);
 
                     return (
                       <div key={event.id} className="glass-card rounded-3xl overflow-hidden group flex flex-col h-full relative bg-white/60">
@@ -1474,7 +1700,10 @@ const App = () => {
 
                         <div className="p-6 pt-10 flex-1 flex flex-col">
                           <h3 className="text-2xl font-bold text-gray-800 mb-2 group-hover:text-rose-600 transition-colors">{event.title}</h3>
-                          <p className="text-gray-500 text-sm mb-6 flex-1 leading-relaxed">{event.description}</p>
+                          <p className="text-gray-500 text-sm mb-6 flex-1 leading-relaxed">
+                            {event.displayDate && <span className="block font-bold text-rose-600 mb-1">{event.displayDate} | {event.time ? event.time.split('to')[0] : ''}</span>}
+                            {event.description}
+                          </p>
                           
                           <div className="flex items-center gap-4 text-xs text-gray-400 mb-6 font-mono uppercase tracking-wider font-semibold">
                             <span className="flex items-center gap-1">
@@ -1488,17 +1717,19 @@ const App = () => {
                           </div>
 
                           <button 
-                            disabled={isRegistered || (isFull && !isRegistered)}
+                            disabled={isRegistered || (isFull && !isRegistered) || isClosed}
                             onClick={() => setSelectedEvent(event)}
                             className={`w-full py-4 rounded-xl font-bold uppercase tracking-wider text-xs transition-all duration-300 shadow-lg ${
                               isRegistered 
                                 ? 'bg-emerald-100 text-emerald-600 border border-emerald-200 cursor-default'
-                                : isFull 
-                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                  : `bg-gradient-to-r ${event.color} text-white hover:shadow-rose-300 hover:scale-[1.02]`
+                                : isClosed
+                                  ? 'bg-gray-200 text-gray-500 border border-gray-300 cursor-not-allowed'
+                                  : isFull 
+                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                    : `bg-gradient-to-r ${event.color} text-white hover:shadow-rose-300 hover:scale-[1.02]`
                             }`}
                           >
-                            {isRegistered ? 'Registered' : isFull ? 'Limit Reached (3)' : 'Register Now'}
+                            {isRegistered ? 'Registered' : isClosed ? 'Reg Closed' : isFull ? 'Limit Reached' : 'Register Now'}
                           </button>
                         </div>
                       </div>
@@ -1534,7 +1765,7 @@ const App = () => {
               )}
 
               {/* Admin View */}
-              {view === 'admin' && currentUser.role === 'teacher' && (
+              {view === 'admin' && currentUser.role === 'faculty' && (
                 <AdminDashboard 
                   registrations={registrations} 
                   events={getAllEvents()} 
@@ -1545,6 +1776,11 @@ const App = () => {
             </main>
           </div>
         )}
+      </div>
+
+      {/* Watermark - Fixed to bottom right */}
+      <div className="fixed bottom-2 right-2 md:bottom-4 md:right-6 text-[8px] md:text-[10px] text-rose-900/60 font-mono pointer-events-none z-50 bg-white/40 px-2 py-1 rounded-md backdrop-blur-sm border border-white/20">
+        Designed & Developed by R. Nishanth Chakkravarthy IT - B II year
       </div>
 
       <footer className="relative z-10 py-6 text-center text-rose-900/40 text-xs mt-auto border-t border-rose-100">
