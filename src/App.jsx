@@ -52,7 +52,6 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-// Note: This tries to initialize. If .env vars are missing (like in some previews), it catches the error.
 let app, auth, db;
 try {
   app = initializeApp(firebaseConfig);
@@ -61,6 +60,10 @@ try {
 } catch (error) {
   console.error("Firebase Initialization Error (Check .env):", error);
 }
+
+// --- DATABASE COLLECTIONS (UPDATED FOR FRESH START) ---
+const DB_USERS = 'users_2026';
+const DB_REGISTRATIONS = 'registrations_2026';
 
 // --- Constants & Mock Data ---
 
@@ -139,7 +142,7 @@ const STUDENT_EVENTS = [
     displayDate: "23.02.26",
     time: "2.00 pm to 4.00 pm",
     coordinator: "Mrs B Subha, BME",
-    contact: "8973281169", // Updated from circular context if available or previous data
+    contact: "8973281169", 
     description: "Theme: 'Shakti - The Power Within'. Exhibit elegance and confidence.",
     color: "from-fuchsia-500 to-pink-600",
     theme: "platinum-elite"
@@ -227,7 +230,6 @@ const STUDENT_EVENTS = [
 ];
 
 // --- FACULTY EVENTS (Strictly from Faculty Circular) ---
-// IDs start at 100 to avoid conflict with student events
 const FACULTY_EVENTS = [
   {
     id: 101,
@@ -477,7 +479,6 @@ const CustomStyles = () => (
     
     /* --- LUXURY TICKET TEXTURES & GRADIENTS --- */
     
-    /* Text Gradients */
     .text-gold-gradient {
       background: linear-gradient(to bottom, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C);
       -webkit-background-clip: text;
@@ -1458,13 +1459,13 @@ const App = () => {
     if (!firebaseUser || !db) return;
 
     // Listen to users collection
-    const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+    const unsubUsers = onSnapshot(collection(db, 'users_2026'), (snapshot) => {
       const usersData = snapshot.docs.map(doc => ({ ...doc.data(), firestoreId: doc.id }));
       setUsers(usersData);
     });
 
     // Listen to registrations collection
-    const unsubRegs = onSnapshot(collection(db, 'registrations'), (snapshot) => {
+    const unsubRegs = onSnapshot(collection(db, 'registrations_2026'), (snapshot) => {
       const regsData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
       setRegistrations(regsData);
     });
@@ -1486,10 +1487,10 @@ const App = () => {
     if (!link) {
       const newLink = document.createElement('link');
       newLink.rel = 'icon';
-      newLink.href = '/psna-logo.png';
+      newLink.href = '/psna_logo.png';
       document.head.appendChild(newLink);
     } else {
-      link.href = '/psna-logo.png';
+      link.href = '/psna_logo.png';
     }
   }, []);
 
@@ -1501,7 +1502,7 @@ const App = () => {
     }
     
     try {
-      await addDoc(collection(db, 'users'), newUser);
+      await addDoc(collection(db, 'users_2026'), newUser);
       alert("Account created successfully! Please Sign In.");
     } catch (e) {
       console.error("Error adding document: ", e);
@@ -1523,7 +1524,7 @@ const App = () => {
     
     if (userToUpdate && userToUpdate.firestoreId && db) {
       try {
-        const userRef = doc(db, 'users', userToUpdate.firestoreId);
+        const userRef = doc(db, 'users_2026', userToUpdate.firestoreId);
         await updateDoc(userRef, { password: newPassword });
         alert("Password updated successfully!");
       } catch (e) {
@@ -1573,7 +1574,7 @@ const App = () => {
 
     if (firebaseUser && db) {
       try {
-        await addDoc(collection(db, 'registrations'), newRegistration);
+        await addDoc(collection(db, 'registrations_2026'), newRegistration);
       } catch (e) {
         console.error("Error adding registration: ", e);
         // Fallback
@@ -1606,7 +1607,7 @@ const App = () => {
         <header className="flex flex-col md:flex-row justify-between items-center mb-12 glass-panel p-6 rounded-3xl bg-white/70">
           <div className="flex items-center gap-4 mb-4 md:mb-0">
             <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-md">
-                <img src="/psna-logo.png" alt="PSNA Logo" className="w-full h-full object-cover" />
+                <img src="/psna_logo.png" alt="PSNA Logo" className="w-full h-full object-cover" />
             </div>
             <div>
               <h1 className="text-2xl md:text-3xl font-black tracking-tight text-gray-900 leading-none">PSNA</h1>
