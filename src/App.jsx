@@ -117,7 +117,7 @@ const STUDENT_EVENTS = [
   },
   {
     id: 3,
-    title: "Brave",
+    title: "Rise of the Brave",
     type: "Awareness Game",
     category: "Solo",
     maxTeamSize: 1,
