@@ -1500,6 +1500,20 @@ const App = () => {
     if (!currentUser) setView('events');
   }, [currentUser]);
 
+   // Tab Title and Favicon
+  useEffect(() => {
+    document.title = "PSNA Women's Day 2026";
+    const link = document.querySelector("link[rel~='icon']");
+    if (!link) {
+      const newLink = document.createElement('link');
+      newLink.rel = 'icon';
+      newLink.href = '/psna-logo.png';
+      document.head.appendChild(newLink);
+    } else {
+      link.href = '/psna-logo.png';
+    }
+  }, []);
+
   const handleRegisterUser = async (newUser) => {
     if (!firebaseUser || !db) {
       // Fallback for preview
