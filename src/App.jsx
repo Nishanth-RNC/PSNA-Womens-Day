@@ -1613,7 +1613,7 @@ const App = () => {
         <header className="flex flex-col md:flex-row justify-between items-center mb-12 glass-panel p-6 rounded-3xl bg-white/70">
           <div className="flex items-center gap-4 mb-4 md:mb-0">
             <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-md">
-                <img src="/psna_logo.png" alt="PSNA Logo" className="w-full h-full object-cover" />
+                <img src="/psna-logo.png" alt="PSNA Logo" className="w-full h-full object-cover" />
             </div>
             <div>
               <h1 className="text-2xl md:text-3xl font-black tracking-tight text-gray-900 leading-none">PSNA</h1>
