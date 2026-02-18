@@ -61,7 +61,7 @@ try {
   console.error("Firebase Initialization Error (Check .env):", error);
 }
 
-// --- DATABASE COLLECTIONS (UPDATED FOR FRESH START) ---
+// --- DATABASE COLLECTIONS (FRESH START) ---
 const DB_USERS = 'users_2026';
 const DB_REGISTRATIONS = 'registrations_2026';
 
@@ -230,6 +230,7 @@ const STUDENT_EVENTS = [
 ];
 
 // --- FACULTY EVENTS (Strictly from Faculty Circular) ---
+// IDs start at 100 to avoid conflict with student events
 const FACULTY_EVENTS = [
   {
     id: 101,
@@ -251,7 +252,7 @@ const FACULTY_EVENTS = [
     title: "Talk Without Talking",
     type: "Dumb Charades",
     category: "Team",
-    maxTeamSize: 4, 
+    maxTeamSize: 2, 
     icon: <Sparkles className="w-6 h-6" />,
     date: "2026-02-25",
     displayDate: "25.02.26",
@@ -961,6 +962,8 @@ const Auth = ({ users, onLogin, onRegisterUser, onResetPassword }) => {
                   <label className="text-rose-900/70 text-xs uppercase tracking-widest font-bold ml-1">Create Password</label>
                   <input name="password" type="password" value={formData.password} onChange={handleChange} className="w-full input-field rounded-xl px-4 py-2" placeholder="Create Password" />
                 </div>
+
+                {/* Master Code input removed for Faculty */}
               </div>
             )}
 
@@ -1112,8 +1115,8 @@ const TicketView = ({ registration, event, user }) => {
                   <p className="text-sm font-bold opacity-90">{user.dept}</p>
                </div>
                <div>
-                 <p className="text-white/40 text-[9px] uppercase tracking-widest">Status</p>
-                 <p className={`font-bold text-lg ${textGradientClass}`}>Selected</p>
+                 <p className="text-white/40 text-[9px] uppercase tracking-widest">Seat</p>
+                 <p className={`font-bold text-lg ${textGradientClass}`}>VIP FRONT ROW</p>
                </div>
             </div>
 
@@ -1161,12 +1164,12 @@ const TicketView = ({ registration, event, user }) => {
 // 3. Admin Dashboard (Excel Downloads)
 const AdminDashboard = ({ registrations, events, allUsers }) => {
   
-  const downloadAll = () => {
+  const generateCSV = (data, filename) => {
     let csvContent = "data:text/csv;charset=utf-8,";
     // Header
     csvContent += "Event,Participant Name,ID,Department,Year/Sec,Phone,Role,Team Name,Teammates\n";
 
-    registrations.forEach(reg => {
+    data.forEach(reg => {
       // Find full user details for this registration
       const userDetails = allUsers.find(u => u.uniqueId === reg.userId);
       const eventDetails = events.find(e => e.id === reg.eventId);
@@ -1191,10 +1194,19 @@ const AdminDashboard = ({ registrations, events, allUsers }) => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "PSNA_WomensDay_All_Registrations.csv");
+    link.setAttribute("download", filename);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const downloadAll = () => {
+    generateCSV(registrations, "PSNA_WomensDay_All_Registrations.csv");
+  };
+
+  const downloadEvent = (eventId, eventTitle) => {
+    const eventRegs = registrations.filter(r => r.eventId === eventId);
+    generateCSV(eventRegs, `PSNA_${eventTitle.replace(/\s+/g, '_')}_Registrations.csv`);
   };
 
   const getEventStats = (eventId) => {
@@ -1224,6 +1236,14 @@ const AdminDashboard = ({ registrations, events, allUsers }) => {
                 <div className={`p-3 rounded-xl text-white bg-gradient-to-br ${event.color} shadow-md`}>
                   {event.icon}
                 </div>
+                {/* Individual Download Button */}
+                <button 
+                  onClick={() => downloadEvent(event.id, event.title)}
+                  className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                  title="Download Event Report"
+                >
+                  <Download size={20} />
+                </button>
               </div>
               <h3 className="text-gray-800 font-bold text-lg">{event.title}</h3>
               <p className="text-gray-500 text-sm mt-1 mb-4">{event.type}</p>
@@ -1459,13 +1479,13 @@ const App = () => {
     if (!firebaseUser || !db) return;
 
     // Listen to users collection
-    const unsubUsers = onSnapshot(collection(db, 'users_2026'), (snapshot) => {
+    const unsubUsers = onSnapshot(collection(db, DB_USERS), (snapshot) => {
       const usersData = snapshot.docs.map(doc => ({ ...doc.data(), firestoreId: doc.id }));
       setUsers(usersData);
     });
 
     // Listen to registrations collection
-    const unsubRegs = onSnapshot(collection(db, 'registrations_2026'), (snapshot) => {
+    const unsubRegs = onSnapshot(collection(db, DB_REGISTRATIONS), (snapshot) => {
       const regsData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
       setRegistrations(regsData);
     });
@@ -1480,20 +1500,6 @@ const App = () => {
     if (!currentUser) setView('events');
   }, [currentUser]);
 
-  // Tab Title and Favicon
-  useEffect(() => {
-    document.title = "PSNA Women's Day 2026";
-    const link = document.querySelector("link[rel~='icon']");
-    if (!link) {
-      const newLink = document.createElement('link');
-      newLink.rel = 'icon';
-      newLink.href = '/psna_logo.png';
-      document.head.appendChild(newLink);
-    } else {
-      link.href = '/psna_logo.png';
-    }
-  }, []);
-
   const handleRegisterUser = async (newUser) => {
     if (!firebaseUser || !db) {
       // Fallback for preview
@@ -1502,7 +1508,7 @@ const App = () => {
     }
     
     try {
-      await addDoc(collection(db, 'users_2026'), newUser);
+      await addDoc(collection(db, DB_USERS), newUser);
       alert("Account created successfully! Please Sign In.");
     } catch (e) {
       console.error("Error adding document: ", e);
@@ -1524,7 +1530,7 @@ const App = () => {
     
     if (userToUpdate && userToUpdate.firestoreId && db) {
       try {
-        const userRef = doc(db, 'users_2026', userToUpdate.firestoreId);
+        const userRef = doc(db, DB_USERS, userToUpdate.firestoreId);
         await updateDoc(userRef, { password: newPassword });
         alert("Password updated successfully!");
       } catch (e) {
@@ -1574,7 +1580,7 @@ const App = () => {
 
     if (firebaseUser && db) {
       try {
-        await addDoc(collection(db, 'registrations_2026'), newRegistration);
+        await addDoc(collection(db, DB_REGISTRATIONS), newRegistration);
       } catch (e) {
         console.error("Error adding registration: ", e);
         // Fallback
