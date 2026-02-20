@@ -332,8 +332,8 @@ const FACULTY_EVENTS = [
     date: "2026-02-27",
     displayDate: "27.02.26",
     time: "11.00 am to 12.30 pm",
-    coordinator: "Mrs M.Lishmah Dominic, MBA",
-    contact: "9176057963",
+    coordinator: "Ms. Swathini S, AP/CIVIL, Ms. Sree Rameswari A, AP/ CIVIL ",
+    contact: "919524412764",
     color: "from-indigo-500 to-blue-600",
     theme: "royal-gold"
   },
